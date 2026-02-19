@@ -2,7 +2,7 @@ import os
 from importlib.machinery import SourceFileLoader
 from types import ModuleType
 
-
+ 
 try:
     # Funciona melhor em ambiente empacotado (PyInstaller).
     import main as _backend

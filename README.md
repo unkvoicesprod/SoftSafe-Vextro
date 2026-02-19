@@ -1,10 +1,10 @@
-﻿# SoftSafe Downloader
+﻿# SoftSafe Vextro
 
 Downloader de videos, audios e playlists do YouTube com interface grafica (Tkinter), tema claro/escuro, splash screen e empacotamento para Windows.
 
 ## Sobre
 
-O **SoftSafe Downloader** usa `yt-dlp` para baixar conteudo do YouTube e oferece uma interface simples para:
+O **SoftSafe Vextro** usa `yt-dlp` para baixar conteudo do YouTube e oferece uma interface simples para:
 
 - Baixar **video** (com selecao de qualidade/formato)
 - Baixar **audio** (com conversao para MP3/M4A)
@@ -18,7 +18,7 @@ O **SoftSafe Downloader** usa `yt-dlp` para baixar conteudo do YouTube e oferece
 - Interface grafica em Python (`tkinter`)
 - Splash screen de inicializacao
 - Alternancia de tema `Light/Dark`
-- Barra de progresso + log em tempo real
+- Barra de progresso em tempo real
 - Botao de logs com opcoes:
   - Abrir arquivo de log
   - Limpar log
@@ -34,18 +34,21 @@ O **SoftSafe Downloader** usa `yt-dlp` para baixar conteudo do YouTube e oferece
 - `backend.py`: ponte/import do backend para GUI
 - `ico.png` / `ico.ico`: icones do app
 - `version_info.txt`: metadados de versao para build
-- `SoftSafe Downloader.spec`: configuracao PyInstaller
+- `SoftSafe Vextro.spec`: configuracao PyInstaller
+- `requirements.txt`: dependencias do projeto
 
 ## Requisitos (modo Python)
 
 - Python 3.10+
 - `yt-dlp`
 - `requests`
+- `Pillow`
+- `pyinstaller` (para build)
 
 Instalacao:
 
 ```bash
-pip install yt-dlp requests
+pip install -r requirements.txt
 ```
 
 ## Executar em desenvolvimento
@@ -60,17 +63,28 @@ Exemplo de build com PyInstaller:
 
 ```bash
 python -m PyInstaller --noconfirm --clean --onefile --windowed \
-  --name "SoftSafe Downloader" \
+  --name "SoftSafe Vextro" \
   --icon "ico.ico" \
   --version-file "version_info.txt" \
   --add-data "ico.png;." \
+  --add-data "exit.png;." \
   --add-binary "ffmpeg.exe;." \
   main.py
 ```
 
 Saida:
 
-- `dist/SoftSafe Downloader.exe`
+- `dist/SoftSafe Vextro.exe`
+
+### Build onefile (usuarios sem Python/FFmpeg)
+
+Use o script:
+
+```bash
+build_onefile.bat
+```
+
+Este script gera um unico `.exe` e inclui `ffmpeg.exe` no executavel.
 
 ## Observacoes importantes
 
@@ -80,10 +94,10 @@ Saida:
 
 ## Metadados atuais do executavel
 
-- ProductName: `SoftSafe Downloader`
+- ProductName: `SoftSafe Vextro`
 - FileDescription: `Dev Francisco Armando Chico`
-- ProductVersion: `1.1.1`
-- FileVersion: `1.1.1`
+- ProductVersion: `3.0.0`
+- FileVersion: `3.0.0`
 - CompanyName: `SoftSafe`
 - Copyright: `Copyright (c) 2026 SoftSafe`
 

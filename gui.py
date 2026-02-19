@@ -26,10 +26,10 @@ def set_app_icon(root):
     if os.name == 'nt':
         try:
             import ctypes
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('SoftSafe.Downloader.2026')
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('SoftSafe.Vextro.3.0')
         except Exception:
             pass
-
+ 
     try:
         if os.path.isfile(icon_png):
             root._app_icon = tk.PhotoImage(file=icon_png)
@@ -56,17 +56,19 @@ def set_app_icon(root):
 class UnkvDownloaderApp:
     def __init__(self, root):
         self.root = root
-        self.root.title('SoftSafe Downloader 2026')
+        self.root.title('SoftSafe Vextro 3.0')
         set_app_icon(self.root)
-        self.root.geometry('800x480')
-        self.root.minsize(800, 480)
-        self.root.maxsize(800, 480)
+        self.root.geometry('800x580')
+        self.root.minsize(800, 580)
+        self.root.maxsize(800, 580)
+        self._center_window(self.root, 800, 580)
 
 
         self.log_queue = queue.Queue()
         self.em_execucao = False
         self.log_file_path = os.path.join(os.path.dirname(__file__), 'download_logs.txt')
         self.theme_mode = 'light'
+        self.log_text = None
 
         if not os.path.exists(self.log_file_path):
             with open(self.log_file_path, 'w', encoding='utf-8') as _:
@@ -81,27 +83,95 @@ class UnkvDownloaderApp:
         self.style.theme_use('clam')
         self._apply_theme()
 
+    def _center_window(self, window, width, height):
+        window.update_idletasks()
+        sw = window.winfo_screenwidth()
+        sh = window.winfo_screenheight()
+        x = int((sw - width) / 2)
+        y = int((sh - height) / 2)
+        window.geometry(f'{width}x{height}+{x}+{y}')
+
     def _build_ui(self):
         self.container = ttk.Frame(self.root, style='Card.TFrame', padding=18)
         self.container.pack(fill='both', expand=True, padx=18, pady=18)
 
-        ttk.Label(self.container, text='SoftSafe Downloader 2026', 
+        def _load_png_scaled(path, size):
+            if not os.path.isfile(path):
+                return None
+            try:
+                from PIL import Image, ImageTk
+                img = Image.open(path).convert('RGBA')
+                resample = getattr(getattr(Image, 'Resampling', Image), 'LANCZOS', None)
+                if resample is None:
+                    resample = getattr(Image, 'LANCZOS', None)
+                if resample is None:
+                    resample = getattr(Image, 'BICUBIC', 3)
+                img = img.resize((size, size), resample)
+                return ImageTk.PhotoImage(img)
+            except Exception:
+                try:
+                    img = tk.PhotoImage(file=path)
+                    w, h = img.width(), img.height()
+                    if w <= 0 or h <= 0:
+                        return img
+                    scale = max(w // size, h // size, 1)
+                    return img.subsample(int(scale))
+                except Exception:
+                    return None
+
+        base_dir = getattr(sys, '_MEIPASS', os.path.dirname(__file__))
+        icon_png = os.path.join(base_dir, 'ico.png')
+        self.icon_large = None
+        if os.path.isfile(icon_png):
+            try:
+                self.icon_large = _load_png_scaled(icon_png, 50)
+            except Exception:
+                self.icon_large = None
+
+        if self.icon_large:
+            ttk.Label(self.container, image=self.icon_large, style='Flat.TLabel').grid(
+                row=0, column=0, sticky='w', padx=(0, 10), pady=(0, 14)
+            )
+
+        ttk.Label(self.container, text='SoftSafe Vextro 3.0',
                   style='Title.TLabel').grid(
-            row=0, column=0, columnspan=2, sticky='w', pady=(0, 14)
+            row=0, column=1, columnspan=2, sticky='w', pady=(0, 14)
         )
+
+        self.top_actions = ttk.Frame(self.container, style='Card.TFrame')
+        self.top_actions.grid(row=0, column=3, sticky='e', pady=(0, 14))
         self.support_link = ttk.Label(
-            self.container,
+            self.top_actions,
             text='Apoie o projeto',
             style='Link.TLabel',
             cursor='hand2',
         )
-        self.support_link.grid(row=0, column=2, columnspan=2, sticky='e', pady=(0, 14))
+        self.support_link.pack(side='left', padx=(0, 8))
         self.support_link.bind('<Button-1>', self.abrir_link_apoiador)
+
+        exit_png = os.path.join(base_dir, 'exit.png')
+        self.exit_icon = _load_png_scaled(exit_png, 18)
+        if self.exit_icon:
+            self.btn_exit = ttk.Button(
+                self.top_actions,
+                image=self.exit_icon,
+                style='GhostNoBorder.TButton',
+                command=self.fechar_programa,
+            )
+        else:
+            self.btn_exit = ttk.Button(
+                self.top_actions,
+                text='Fechar',
+                style='GhostNoBorder.TButton',
+                command=self.fechar_programa,
+            )
+        self.btn_exit.pack(side='left')
 
         ttk.Label(self.container, text='URL do YouTube', style='Flat.TLabel').grid(row=1, column=0, sticky='w')
         self.url_var = tk.StringVar()
         self.url_entry = ttk.Entry(self.container, textvariable=self.url_var, style='Flat.TEntry')
-        self.url_entry.grid(row=2, column=0, columnspan=3, sticky='ew', padx=(0, 8), pady=(2, 10))
+        self.url_entry.grid(row=2, column=0, columnspan=2, sticky='ew', padx=(0, 8), pady=(2, 10))
+        ttk.Button(self.container, text='Colar link', style='Flat.TButton', command=self.colar_link).grid(row=2, column=2, sticky='ew', padx=(0, 8))
         ttk.Button(self.container, text='Buscar info', style='Ghost.TButton', command=self.buscar_info).grid(row=2, column=3, sticky='ew')
 
         ttk.Label(self.container, text='Pasta de destino', style='Flat.TLabel').grid(row=3, column=0, sticky='w')
@@ -117,7 +187,7 @@ class UnkvDownloaderApp:
             textvariable=self.tipo_var,
             state='readonly',
             values=['Video', 'Audio', 'Playlist Video', 'Playlist Audio'],
-            style='Flat.TCombobox',
+            style='FlatNoBg.TCombobox',
         )
         self.tipo_combo.grid(row=6, column=0, sticky='ew', pady=(2, 10))
         self.tipo_combo.bind('<<ComboboxSelected>>', lambda _: self.atualizar_campos())
@@ -138,7 +208,7 @@ class UnkvDownloaderApp:
             self.container,
             textvariable=self.formato_video_var,
             values=['mp4', 'mkv', 'webm'],
-            style='Flat.TCombobox',
+            style='FlatNoBg.TCombobox',
         )
         self.formato_video_combo.grid(row=6, column=2, sticky='ew', pady=(2, 10))
 
@@ -177,14 +247,17 @@ class UnkvDownloaderApp:
         botoes = ttk.Frame(self.container, style='Card.TFrame')
         botoes.grid(row=12, column=0, columnspan=4, sticky='ew', pady=(10, 8))
         botoes.columnconfigure(0, weight=1)
-        botoes.columnconfigure(1, weight=1)
+        botoes.columnconfigure(1, weight=2)
         botoes.columnconfigure(2, weight=1)
+        botoes.columnconfigure(3, weight=1)
         self.btn_baixar = ttk.Button(botoes, text='Iniciar download', style='Flat.TButton', command=self.iniciar_download)
         self.btn_baixar.grid(row=0, column=0, sticky='ew', padx=(0, 6))
+        self.btn_cancelar = ttk.Button(botoes, text='Cancelar', style='Danger.TButton', command=self.cancelar_download)
+        self.btn_cancelar.grid(row=0, column=1, sticky='ew', padx=(6, 6))
         self.btn_logs = ttk.Button(botoes, text='Logs', style='Ghost.TButton', command=self.mostrar_menu_logs)
-        self.btn_logs.grid(row=0, column=1, sticky='ew', padx=(6, 6))
+        self.btn_logs.grid(row=0, column=2, sticky='ew', padx=(6, 6))
         self.btn_theme = ttk.Button(botoes, text='Tema: Light', style='Ghost.TButton', command=self.toggle_theme)
-        self.btn_theme.grid(row=0, column=2, sticky='ew', padx=(6, 0))
+        self.btn_theme.grid(row=0, column=3, sticky='ew', padx=(6, 0))
         self.menu_logs = tk.Menu(self.root, tearoff=0)
         self.menu_logs.add_command(label='Abrir arquivo', command=self.abrir_arquivo_log)
         self.menu_logs.add_command(label='Limpar', command=self.limpar_log)
@@ -198,12 +271,8 @@ class UnkvDownloaderApp:
         self.status_var = tk.StringVar(value='Pronto')
         ttk.Label(self.container, textvariable=self.status_var, style='Status.TLabel').grid(row=15, column=0, columnspan=4, sticky='w', pady=(0, 8))
 
-        self.log_text = scrolledtext.ScrolledText(self.container, height=14, relief='flat')
-        self.log_text.grid(row=16, column=0, columnspan=4, sticky='nsew')
-
         for idx in range(4):
             self.container.columnconfigure(idx, weight=1)
-        self.container.rowconfigure(16, weight=1)
         self._apply_theme()
         self.atualizar_campos()
 
@@ -218,10 +287,13 @@ class UnkvDownloaderApp:
                 'primary': '#2563eb',
                 'primary_active': '#1d4ed8',
                 'primary_disabled': '#93c5fd',
+                'danger': '#dc2626',
+                'danger_active': '#b91c1c',
+                'danger_disabled': '#fca5a5',
                 'ghost_bg': '#e5e7eb',
                 'ghost_active': '#d1d5db',
                 'input_bg': '#f9fafb',
-                'input_border': '#d1d5db',
+                'input_border': '#4d4d4d',
                 'prog_trough': '#e5e7eb',
                 'log_bg': '#0b1220',
                 'log_fg': '#d1fae5',
@@ -237,10 +309,13 @@ class UnkvDownloaderApp:
                 'primary': '#3b82f6',
                 'primary_active': '#2563eb',
                 'primary_disabled': '#1d4ed8',
+                'danger': '#ef4444',
+                'danger_active': '#dc2626',
+                'danger_disabled': '#fca5a5',
                 'ghost_bg': '#1f2937',
                 'ghost_active': '#374151',
                 'input_bg': '#111827',
-                'input_border': '#374151',
+                'input_border': '#bfbfbf',
                 'prog_trough': '#1f2937',
                 'log_bg': '#020617',
                 'log_fg': '#a7f3d0',
@@ -254,21 +329,44 @@ class UnkvDownloaderApp:
         self.style.configure('Flat.TLabel', background=c['card_bg'], foreground=c['text'], font=('Segoe UI', 10))
         self.style.configure('Title.TLabel', background=c['card_bg'], foreground=c['title'], font=('Segoe UI Semibold', 14))
         self.style.configure('Status.TLabel', background=c['card_bg'], foreground=c['status'], font=('Segoe UI', 10, 'bold'))
-        self.style.configure('Flat.TButton', background=c['primary'], foreground='#ffffff', borderwidth=0, padding=8)
+        self.style.configure('Flat.TButton', background=c['primary'], foreground='#ffffff', borderwidth=0, relief='flat', padding=8)
         self.style.map('Flat.TButton', background=[('active', c['primary_active']), ('disabled', c['primary_disabled'])], foreground=[('disabled', '#e5e7eb')])
-        self.style.configure('Ghost.TButton', background=c['ghost_bg'], foreground=c['text'], borderwidth=0, padding=8)
-        self.style.map('Ghost.TButton', background=[('active', c['ghost_active'])])
-        self.style.configure('Flat.TEntry', fieldbackground=c['input_bg'], bordercolor=c['input_border'], lightcolor=c['input_border'], darkcolor=c['input_border'], foreground=c['text'])
-        self.style.configure('Flat.TCombobox', fieldbackground=c['input_bg'], background=c['input_bg'], foreground=c['text'])
+        self.style.configure('Danger.TButton', background=c['danger'], foreground='#ffffff', borderwidth=0, relief='flat', padding=8)
+        self.style.map('Danger.TButton', background=[('active', c['danger_active']), ('disabled', c['danger_disabled'])], foreground=[('disabled', '#fee2e2')])
+        self.style.configure('Ghost.TButton', background=c['card_bg'], foreground=c['text'], borderwidth=1, relief='solid', padding=8)
+        self.style.map('Ghost.TButton', background=[('active', c['card_bg'])])
+        self.style.configure('GhostNoBorder.TButton', background=c['card_bg'], foreground=c['text'], borderwidth=0, relief='flat', padding=8)
+        self.style.map('GhostNoBorder.TButton', background=[('active', c['card_bg'])])
+        self.style.configure('Flat.TEntry', fieldbackground=c['card_bg'], bordercolor=c['input_border'], lightcolor=c['input_border'], darkcolor=c['input_border'], foreground=c['text'], padding=6, borderwidth=1, relief='solid')
+        self.style.configure('Flat.TCombobox', fieldbackground=c['card_bg'], background=c['card_bg'], bordercolor=c['input_border'], lightcolor=c['input_border'], darkcolor=c['input_border'], foreground=c['text'], padding=6, borderwidth=1, relief='solid')
+        self.style.configure('FlatNoBg.TCombobox', fieldbackground=c['card_bg'], background=c['card_bg'], bordercolor=c['input_border'], lightcolor=c['input_border'], darkcolor=c['input_border'], foreground=c['text'], padding=6, borderwidth=1, relief='solid')
+        self.style.map(
+            'FlatNoBg.TCombobox',
+            fieldbackground=[('readonly', c['card_bg']), ('disabled', c['card_bg'])],
+            background=[('readonly', c['card_bg']), ('disabled', c['card_bg'])],
+            foreground=[('readonly', c['text']), ('disabled', c['text'])],
+        )
         self.style.configure('Main.Horizontal.TProgressbar', troughcolor=c['prog_trough'], background=c['primary'], bordercolor=c['prog_trough'], lightcolor=c['primary'], darkcolor=c['primary'])
         self.style.configure('Link.TLabel', background=c['card_bg'], foreground='#1d4ed8' if self.theme_mode == 'light' else '#93c5fd', font=('Segoe UI', 9, 'underline'))
 
-        if hasattr(self, 'log_text'):
+        if self.log_text is not None:
             self.log_text.configure(bg=c['log_bg'], fg=c['log_fg'], insertbackground=c['log_fg'])
         if hasattr(self, 'menu_logs'):
             self.menu_logs.configure(bg=c['menu_bg'], fg=c['menu_fg'], activebackground=c['ghost_active'], activeforeground=c['menu_fg'])
         if hasattr(self, 'btn_theme'):
             self.btn_theme.configure(text='Tema: Light' if self.theme_mode == 'light' else 'Tema: Dark')
+
+        # Remove o fundo das opcoes do Combobox (lista de itens).
+        try:
+            self.root.option_add('*TButton.cursor', 'hand2')
+            self.root.option_add('*TCombobox*Listbox.background', c['card_bg'])
+            self.root.option_add('*TCombobox*Listbox.foreground', c['text'])
+            self.root.option_add('*TCombobox*Listbox.selectBackground', c['card_bg'])
+            self.root.option_add('*TCombobox*Listbox.selectForeground', c['text'])
+            self.root.option_add('*TCombobox*Listbox.highlightThickness', 1)
+            self.root.option_add('*TCombobox*Listbox.borderWidth', 1)
+        except Exception:
+            pass
 
     def toggle_theme(self):
         self.theme_mode = 'dark' if self.theme_mode == 'light' else 'light'
@@ -276,6 +374,19 @@ class UnkvDownloaderApp:
 
     def abrir_link_apoiador(self, _event=None):
         webbrowser.open('https://www.paypal.com/ncp/payment/984SMG97UGV6N', new=2)
+
+    def fechar_programa(self):
+        self.root.destroy()
+
+    def colar_link(self):
+        try:
+            texto = self.root.clipboard_get().strip()
+        except tk.TclError:
+            texto = ''
+        if texto:
+            self.url_var.set(texto)
+            self.url_entry.focus_set()
+            self.url_entry.icursor('end')
 
     def _enqueue_log(self, mensagem):
         self.log_queue.put(('log', mensagem))
@@ -288,8 +399,9 @@ class UnkvDownloaderApp:
             kind, payload = self.log_queue.get_nowait()
             if kind == 'log':
                 texto = str(payload)
-                self.log_text.insert('end', texto + '\n')
-                self.log_text.see('end')
+                if self.log_text is not None:
+                    self.log_text.insert('end', texto + '\n')
+                    self.log_text.see('end')
                 with open(self.log_file_path, 'a', encoding='utf-8') as log_file:
                     log_file.write(texto + '\n')
             elif kind == 'progress':
@@ -311,9 +423,17 @@ class UnkvDownloaderApp:
             self.destino_var.set(pasta)
 
     def limpar_log(self):
-        self.log_text.delete('1.0', 'end')
+        if self.log_text is not None:
+            self.log_text.delete('1.0', 'end')
         with open(self.log_file_path, 'w', encoding='utf-8') as log_file:
             log_file.write('')
+
+    def cancelar_download(self):
+        if not self.em_execucao:
+            return
+        self._enqueue_log('Cancelamento solicitado pelo usuario.')
+        self.set_status('Cancelamento solicitado (aguarde finalizar).')
+        messagebox.showinfo('Cancelar', 'Cancelamento solicitado. Aguarde a finalizacao do download atual.')
 
     def mostrar_menu_logs(self):
         x = self.btn_logs.winfo_rootx()
@@ -458,9 +578,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-

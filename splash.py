@@ -1,4 +1,6 @@
-﻿import tkinter as tk
+import os
+import sys
+import tkinter as tk
 from tkinter import ttk
 
 
@@ -13,7 +15,7 @@ class SplashScreen(tk.Toplevel):
         except Exception:
             pass
         self.configure(bg='#0f172a')
-        self.geometry(self._center_geometry(560, 280))
+        self.geometry(self._center_geometry(560, 460))
         self.deiconify()
         self.lift()
         self.focus_force()
@@ -21,9 +23,49 @@ class SplashScreen(tk.Toplevel):
         frame = tk.Frame(self, bg='#0f172a', bd=0)
         frame.pack(fill='both', expand=True, padx=18, pady=18)
 
+        def _load_png_scaled(path, size):
+            if not os.path.isfile(path):
+                return None
+            try:
+                from PIL import Image, ImageTk
+                img = Image.open(path).convert('RGBA')
+                resample = getattr(getattr(Image, 'Resampling', Image), 'LANCZOS', None)
+                if resample is None:
+                    resample = getattr(Image, 'LANCZOS', None)
+                if resample is None:
+                    resample = getattr(Image, 'BICUBIC', 3)
+                img = img.resize((size, size), resample)
+                return ImageTk.PhotoImage(img)
+            except Exception:
+                try:
+                    img = tk.PhotoImage(file=path)
+                    w, h = img.width(), img.height()
+                    if w <= 0 or h <= 0:
+                        return img
+                    scale = max(w // size, h // size, 1)
+                    return img.subsample(int(scale))
+                except Exception:
+                    return None
+
+        base_dir = getattr(sys, '_MEIPASS', os.path.dirname(__file__))
+        icon_png = os.path.join(base_dir, 'ico.png')
+        self.icon_large = None
+        if os.path.isfile(icon_png):
+            try:
+                self.icon_large = _load_png_scaled(icon_png, 96)
+            except Exception:
+                self.icon_large = None
+
+        if self.icon_large:
+            tk.Label(
+                frame,
+                image=self.icon_large,
+                bg='#0f172a',
+            ).pack(anchor='w', pady=(4, 8))
+
         tk.Label(
             frame,
-            text='SoftSafe Downloader',
+            text='SoftSafe Vextro',
             bg='#0f172a',
             fg='#e2e8f0',
             font=('Segoe UI Semibold', 22),
@@ -39,7 +81,7 @@ class SplashScreen(tk.Toplevel):
 
         tk.Label(
             frame,
-            text='author: Francisco Armando Chico\nEmpresa: SoftSafe\nLançamento: 2026',
+            text='author: Francisco Armando Chico\nEmpresa: SoftSafe\nLançamento: 2026\nVersão: 3.0',
             justify='left',
             bg='#0f172a',
             fg='#cbd5e1',
